@@ -1,1 +1,334 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flag Frenzy Quiz</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" xintegrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            width: 95%;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .flag-box {
+            height: 150px; /* Fixed height for consistent look */
+            background-color: #fff;
+            border: 2px solid #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .flag-box img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .choice-button {
+            transition: all 0.2s;
+            transform: scale(1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            text-align: left;
+            padding-left: 1.5rem;
+        }
+        .choice-button:hover:not(:disabled) {
+            transform: scale(1.02);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .choice-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        /* Feedback Styles */
+        .correct {
+            background-color: #10b981 !important; /* Tailwind green-500 */
+            color: white !important;
+            border-color: #059669 !important; /* Tailwind green-600 */
+        }
+        .incorrect {
+            background-color: #ef4444 !important; /* Tailwind red-500 */
+            color: white !important;
+            border-color: #dc2626 !important; /* Tailwind red-600 */
+        }
+    </style>
+</head>
+<body class="selection:bg-indigo-300">
+
+    <div class="container bg-white rounded-xl shadow-2xl">
+        <h1 class="text-3xl font-bold text-center text-indigo-700 mb-6">🌎 Flag Frenzy Quiz</h1>
+
+        <!-- Score and Progress -->
+        <div class="flex justify-between items-center mb-4 text-gray-600 font-semibold">
+            <span id="score" class="text-lg">Score: 0</span>
+            <span id="question-counter" class="text-sm">Question 1/10</span>
+        </div>
+
+        <!-- Flag Display Area -->
+        <div class="flag-box rounded-lg mb-6">
+            <img id="flag-image" src="" alt="Country Flag" class="flag-image hidden">
+            <p id="loading-message" class="text-indigo-500 font-medium">Loading question...</p>
+        </div>
+
+        <!-- Choices Area -->
+        <div id="choices-container" class="space-y-3">
+            <!-- Buttons will be injected here by JavaScript -->
+        </div>
+
+        <!-- Message/Action Area -->
+        <div id="feedback-message" class="mt-6 text-center text-lg font-bold min-h-[1.5rem]"></div>
+        <button id="next-button" class="mt-4 w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition duration-150 choice-button" onclick="nextQuestion()" disabled>
+            Next Question &raquo;
+        </button>
+
+        <!-- Game Over Modal (Hidden initially) -->
+        <div id="game-over-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center hidden">
+            <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
+                <h2 class="text-3xl font-extrabold text-indigo-600 mb-4">Game Over! 🎉</h2>
+                <p class="text-xl text-gray-700 mb-6">Final Score: <span id="final-score" class="font-bold text-green-600">0</span> / 10</p>
+                <button class="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition choice-button" onclick="startGame()">
+                    Play Again
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Use a list of flags with country codes and names.
+        // The flag image URL uses the country's two-letter code.
+        const FLAG_DATA = [
+            { code: "US", name: "United States" },
+            { code: "CA", name: "Canada" },
+            { code: "MX", name: "Mexico" },
+            { code: "GB", name: "United Kingdom" },
+            { code: "FR", name: "France" },
+            { code: "DE", name: "Germany" },
+            { code: "IT", name: "Italy" },
+            { code: "JP", name: "Japan" },
+            { code: "CN", name: "China" },
+            { code: "IN", name: "India" },
+            { code: "BR", name: "Brazil" },
+            { code: "RU", name: "Russia" },
+            { code: "AU", name: "Australia" },
+            { code: "KR", name: "South Korea" },
+            { code: "ES", name: "Spain" },
+            { code: "NL", name: "Netherlands" },
+            { code: "SA", name: "Saudi Arabia" },
+            { code: "ZA", name: "South Africa" },
+            { code: "EG", name: "Egypt" },
+            { code: "AR", name: "Argentina" },
+            { code: "SE", name: "Sweden" },
+            { code: "TR", name: "Turkey" },
+            { code: "ID", name: "Indonesia" },
+            { code: "GR", name: "Greece" },
+            { code: "PL", name: "Poland" },
+            { code: "TH", name: "Thailand" },
+            { code: "VN", name: "Vietnam" },
+            { code: "BE", name: "Belgium" },
+            { code: "PT", name: "Portugal" },
+            { code: "CH", name: "Switzerland" }
+        ];
+
+        // --- Game State Variables ---
+        const TOTAL_QUESTIONS = 10;
+        let gameFlags = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let currentCorrectCountry = null;
+
+        // --- DOM Elements ---
+        const flagImageEl = document.getElementById('flag-image');
+        const choicesContainer = document.getElementById('choices-container');
+        const scoreEl = document.getElementById('score');
+        const counterEl = document.getElementById('question-counter');
+        const feedbackEl = document.getElementById('feedback-message');
+        const nextButton = document.getElementById('next-button');
+        const loadingMessageEl = document.getElementById('loading-message');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const finalScoreEl = document.getElementById('final-score');
+
+        // --- Helper Functions ---
+
+        /**
+         * Shuffles an array in place using the Fisher-Yates (Knuth) algorithm.
+         * @param {Array} array
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        /**
+         * Gets the flag image URL from the country code.
+         * This uses a standard external flag service (twemoji)
+         * @param {string} code - Two-letter country code
+         */
+        function getFlagUrl(code) {
+            // Placeholder URL structure. Use the flagcdn service for better variety/quality.
+            return `https://flagcdn.com/w320/${code.toLowerCase()}.png`;
+        }
+
+        /**
+         * Selects a random, non-repeating set of flags for the game.
+         */
+        function initializeGameFlags() {
+            shuffleArray(FLAG_DATA);
+            // Select the first N flags for the game
+            gameFlags = FLAG_DATA.slice(0, TOTAL_QUESTIONS);
+        }
+
+        /**
+         * Loads and displays the current question.
+         */
+        function loadQuestion() {
+            if (currentQuestionIndex >= TOTAL_QUESTIONS) {
+                return endGame();
+            }
+
+            // Reset UI
+            feedbackEl.textContent = '';
+            nextButton.disabled = true;
+            choicesContainer.innerHTML = '';
+            flagImageEl.classList.add('hidden');
+            loadingMessageEl.classList.remove('hidden');
+
+            const currentFlag = gameFlags[currentQuestionIndex];
+            currentCorrectCountry = currentFlag.name;
+
+            // Update UI Counters
+            counterEl.textContent = `Question ${currentQuestionIndex + 1}/${TOTAL_QUESTIONS}`;
+            scoreEl.textContent = `Score: ${score}`;
+
+            // Load Flag Image
+            const flagUrl = getFlagUrl(currentFlag.code);
+            flagImageEl.src = flagUrl;
+
+            // Wait for image to load before displaying (to prevent CLS)
+            flagImageEl.onload = () => {
+                loadingMessageEl.classList.add('hidden');
+                flagImageEl.classList.remove('hidden');
+                // Generate choices only after image is loaded
+                generateChoices(currentFlag);
+            };
+
+            // Fallback for image loading error
+            flagImageEl.onerror = () => {
+                loadingMessageEl.textContent = 'Could not load flag image. Skipping question.';
+                setTimeout(nextQuestion, 1500); // Auto-skip on error
+            };
+        }
+
+        /**
+         * Generates and displays the four multiple-choice buttons.
+         * @param {object} correctFlag - The object for the correct country.
+         */
+        function generateChoices(correctFlag) {
+            const allChoices = [correctFlag.name];
+
+            // Select three random incorrect answers that are not the correct answer
+            const incorrectFlags = FLAG_DATA.filter(flag => flag.name !== correctFlag.name);
+            shuffleArray(incorrectFlags);
+            const incorrectChoices = incorrectFlags.slice(0, 3).map(flag => flag.name);
+
+            allChoices.push(...incorrectChoices);
+            shuffleArray(allChoices);
+
+            choicesContainer.innerHTML = ''; // Clear previous choices
+
+            allChoices.forEach(choice => {
+                const button = document.createElement('button');
+                button.textContent = choice;
+                button.className = 'choice-button w-full bg-white text-gray-800 font-medium py-3 border border-gray-300 rounded-lg hover:bg-indigo-50 transition duration-150';
+                button.setAttribute('data-country', choice);
+                button.onclick = () => checkAnswer(button, choice, correctFlag.name);
+                choicesContainer.appendChild(button);
+            });
+        }
+
+        /**
+         * Handles user choice and provides feedback.
+         * @param {HTMLButtonElement} selectedButton - The button clicked by the user.
+         * @param {string} selectedCountry - The name selected by the user.
+         * @param {string} correctCountry - The correct country name.
+         */
+        function checkAnswer(selectedButton, selectedCountry, correctCountry) {
+            // Disable all buttons after selection
+            Array.from(choicesContainer.children).forEach(btn => btn.disabled = true);
+
+            if (selectedCountry === correctCountry) {
+                selectedButton.classList.add('correct');
+                feedbackEl.innerHTML = '<span class="text-green-600">Correct! Well done.</span> <i class="fas fa-check-circle"></i>';
+                score++;
+            } else {
+                selectedButton.classList.add('incorrect');
+                feedbackEl.innerHTML = `<span class="text-red-600">Incorrect.</span> The correct answer was <b>${correctCountry}</b>.`;
+
+                // Highlight the correct button
+                const correctButton = Array.from(choicesContainer.children).find(btn => btn.getAttribute('data-country') === correctCountry);
+                if (correctButton) {
+                    correctButton.classList.add('correct');
+                }
+            }
+
+            // Update score immediately
+            scoreEl.textContent = `Score: ${score}`;
+            nextButton.disabled = false; // Enable next button
+        }
+
+        /**
+         * Proceeds to the next question or ends the game.
+         */
+        function nextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        /**
+         * Starts a new game session.
+         */
+        function startGame() {
+            // Hide modal if visible
+            gameOverModal.classList.add('hidden');
+
+            // Reset game state
+            score = 0;
+            currentQuestionIndex = 0;
+            initializeGameFlags();
+
+            // Start the first question
+            loadQuestion();
+        }
+
+        /**
+         * Displays the game over screen.
+         */
+        function endGame() {
+            finalScoreEl.textContent = score;
+            gameOverModal.classList.remove('hidden');
+        }
+
+        // --- Initial Load ---
+        window.onload = startGame;
+    </script>
+</body>
+
+</html>
